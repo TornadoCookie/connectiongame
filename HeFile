@@ -1,0 +1,6 @@
+DefaultDistDir build
+DefaultPlatform linux64-debug
+UseRaylib
+
+Program fsg
+Source main.c
