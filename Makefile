@@ -76,6 +76,8 @@ $(DISTDIR):
 
 CFLAGS+=-Isrc
 CFLAGS+=-Iinclude
+CFLAGS+=-Ilib/boxito/src
+CFLAGS+=-Ilib/boxito/include
 CFLAGS+=-D PLATFORM=\"$(PLATFORM)\"
 
 

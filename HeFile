@@ -4,3 +4,5 @@ UseRaylib
 
 Program fsg
 Source main.c
+
+Dependency boxito

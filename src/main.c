@@ -3,6 +3,9 @@
 #include <string.h>
 #include <raymath.h>
 
+#define BOXITO_IMPLEMENTATION
+#include "boxito.h"
+
 //#if PLATFORM == web
     //#include <emscripten/emscripten.h>
 //#endif
@@ -21,6 +24,7 @@ enum NodeAlignment {
 struct Node {
     enum NodeAlignment alignment;
     Vector2 position;
+    int respawnTimer;
 };
 
 struct Player {
@@ -31,10 +35,17 @@ struct Player {
     int exp;
 };
 
+enum GameScreen {
+    SCREEN_MENU,
+    SCREEN_GAME,
+    SCREEN_END
+};
+
 static struct GameState {
     struct Node nodes[NODE_COUNT];
     Vector2 playfieldSize;
     struct Player player;
+    enum GameScreen screen;
 } game;
 
 void initialize(void)
@@ -43,8 +54,9 @@ void initialize(void)
 
     for (int i = 0; i < NODE_COUNT; i++)
     {
-        game.nodes[i].alignment = GetRandomValue(ALIGNMENT_NEUTRAL, ALIGNMENT_EVIL);
-        game.nodes[i].position = (Vector2){GetRandomValue(0, game.playfieldSize.x), GetRandomValue(0, game.playfieldSize.y)};
+        //game.nodes[i].alignment = GetRandomValue(ALIGNMENT_NEUTRAL, ALIGNMENT_EVIL);
+        //game.nodes[i].position = (Vector2){GetRandomValue(0, game.playfieldSize.x), GetRandomValue(0, game.playfieldSize.y)};
+        game.nodes[i].respawnTimer = GetRandomValue(0, 2048);
     }
 
     game.player.position = (Vector2){game.playfieldSize.x / 2, game.playfieldSize.y / 2};
@@ -55,7 +67,7 @@ void initialize(void)
 #define NODE_RADIUS 30
 #define APPARENT_NODE_RADIUS NODE_RADIUS+PLAYER_RADIUS/2
 
-void update(void)
+void game_update(void)
 {
     // update
     game.player.direction = Vector2Rotate((Vector2){0, 1}, game.player.angle);
@@ -83,16 +95,21 @@ void update(void)
         game.nodes[i].position.x -= 0.5;
         if (game.nodes[i].position.x < -NODE_RADIUS)
         {
-            game.nodes[i].position = (Vector2){game.playfieldSize.x + NODE_RADIUS, GetRandomValue(0, game.playfieldSize.y)};
-            game.nodes[i].alignment = GetRandomValue(ALIGNMENT_NEUTRAL, ALIGNMENT_EVIL);
+            game.nodes[i].respawnTimer--;
+            if (game.nodes[i].respawnTimer <= 0)
+            {
+                game.nodes[i].position = (Vector2){game.playfieldSize.x + NODE_RADIUS, GetRandomValue(0, game.playfieldSize.y)};
+                game.nodes[i].alignment = GetRandomValue(ALIGNMENT_NEUTRAL, ALIGNMENT_EVIL);
+                game.nodes[i].respawnTimer = GetRandomValue(0, 2048);
+            }
         }
 
-        if (CheckCollisionCircles(game.nodes[i].position, NODE_RADIUS, game.player.position, PLAYER_RADIUS))
+        if (CheckCollisionCircles(game.nodes[i].position, APPARENT_NODE_RADIUS, game.player.position, PLAYER_RADIUS))
         {
             switch (game.nodes[i].alignment)
             {
                 case ALIGNMENT_GOOD: game.player.health++; break;
-                case ALIGNMENT_EVIL: game.player.health--; break;
+                case ALIGNMENT_EVIL: game.player.health-=2; break;
                 case ALIGNMENT_NEUTRAL: game.player.exp++; break;
             }
         }
@@ -128,6 +145,38 @@ void update(void)
         DrawText(TextFormat("EXP: %d\n", game.player.exp), 0, 20, 20, WHITE);
 
     EndDrawing();
+}
+
+void menu_update(void)
+{
+    // update
+
+    // draw
+    BeginDrawing();
+        ClearBackground(BLACK);
+        DrawTextCentered("Connections game in space(?)", 30, 30, WHITE);
+
+        if (DrawButtonCentered("Play", GREEN, WHITE, DARKGREEN, LIGHTGRAY, 70))
+        {
+            game.screen = SCREEN_GAME;
+        }
+
+    EndDrawing();
+}
+
+void end_update(void)
+{
+
+}
+
+void update(void)
+{
+    switch (game.screen)
+    {
+        case SCREEN_MENU: menu_update(); break;
+        case SCREEN_GAME: game_update(); break;
+        case SCREEN_END: end_update(); break;
+    }
 }
 
 int main()
