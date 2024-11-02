@@ -10,7 +10,7 @@
 typedef void (*em_callback_func)(void);
 void emscripten_set_main_loop(em_callback_func func, int fps, bool simulate_infinite_loop);
 
-#define NODE_COUNT 100
+#define NODE_COUNT 50
 
 enum NodeAlignment {
     ALIGNMENT_NEUTRAL,
@@ -51,15 +51,15 @@ void initialize(void)
 void update(void)
 {
     // update
-    game.player.direction = Vector2Rotate((Vector2){0, 0.25}, game.player.angle);
+    game.player.direction = Vector2Rotate((Vector2){0, 1}, game.player.angle);
 
     if (IsKeyDown(KEY_DOWN))
     {
-        game.player.position = Vector2Subtract(game.player.position, game.player.direction);
+        game.player.position = Vector2Subtract(game.player.position, Vector2Multiply(game.player.direction, (Vector2){2, 2}));
     }
     else if (IsKeyDown(KEY_UP))
     {
-        game.player.position = Vector2Add(game.player.position, game.player.direction);
+        game.player.position = Vector2Add(game.player.position, Vector2Multiply(game.player.direction, (Vector2){2, 2}));
     }
 
     if (IsKeyDown(KEY_LEFT))
@@ -75,7 +75,10 @@ void update(void)
     ClearBackground(BLACK);
 
     BeginDrawing();
-        
+
+        DrawPoly(game.player.position, 6, 25, game.player.angle*RAD2DEG, BLUE);
+        DrawLineV(game.player.position, Vector2Add(game.player.position, Vector2Multiply(game.player.direction, (Vector2){30, 30})), WHITE);
+
         for (int i = 0; i < NODE_COUNT; i++)
         {
             Color nodeColor;
@@ -85,11 +88,15 @@ void update(void)
                 case ALIGNMENT_GOOD: nodeColor = GREEN; break;
                 case ALIGNMENT_EVIL: nodeColor = RED; break;
             }
-            DrawCircleV(game.nodes[i].position, 15, nodeColor);
-        }
+            DrawCircleV(game.nodes[i].position, 5, nodeColor);
+            DrawCircleLinesV(game.nodes[i].position, 30, nodeColor);
 
-        DrawPolyLines(game.player.position, 5, 25, game.player.angle, BLUE);
-        DrawLineV(game.player.position, Vector2Add(game.player.position, Vector2Multiply(game.player.direction, (Vector2){30, 30})), WHITE);
+            game.nodes[i].position.x -= 0.5;
+            if (game.nodes[i].position.x < -35)
+            {
+                game.nodes[i].position = (Vector2){game.playfieldSize.x + 35, GetRandomValue(0, game.playfieldSize.y)};
+            }
+        }
 
     EndDrawing();
 }
@@ -99,6 +106,7 @@ int main()
     InitWindow(800, 450, "Hello world");
 
     initialize();
+    SetTargetFPS(60);
 
 if (!strcmp(PLATFORM, "web")) //#if PLATFORM == web
 {
