@@ -27,6 +27,8 @@ struct Player {
     Vector2 position;
     float angle;
     Vector2 direction;
+    float health;
+    int exp;
 };
 
 static struct GameState {
@@ -46,7 +48,12 @@ void initialize(void)
     }
 
     game.player.position = (Vector2){game.playfieldSize.x / 2, game.playfieldSize.y / 2};
+    game.player.health = 120;
 }
+
+#define PLAYER_RADIUS 25
+#define NODE_RADIUS 30
+#define APPARENT_NODE_RADIUS NODE_RADIUS+PLAYER_RADIUS/2
 
 void update(void)
 {
@@ -64,11 +71,31 @@ void update(void)
 
     if (IsKeyDown(KEY_LEFT))
     {
-        game.player.angle -= 0.01;
+        game.player.angle -= 0.05;
     }
     else if (IsKeyDown(KEY_RIGHT))
     {
-        game.player.angle += 0.01;
+        game.player.angle += 0.05;
+    }
+
+    for (int i = 0; i < NODE_COUNT; i++)
+    {
+        game.nodes[i].position.x -= 0.5;
+        if (game.nodes[i].position.x < -NODE_RADIUS)
+        {
+            game.nodes[i].position = (Vector2){game.playfieldSize.x + NODE_RADIUS, GetRandomValue(0, game.playfieldSize.y)};
+            game.nodes[i].alignment = GetRandomValue(ALIGNMENT_NEUTRAL, ALIGNMENT_EVIL);
+        }
+
+        if (CheckCollisionCircles(game.nodes[i].position, NODE_RADIUS, game.player.position, PLAYER_RADIUS))
+        {
+            switch (game.nodes[i].alignment)
+            {
+                case ALIGNMENT_GOOD: game.player.health++; break;
+                case ALIGNMENT_EVIL: game.player.health--; break;
+                case ALIGNMENT_NEUTRAL: game.player.exp++; break;
+            }
+        }
     }
 
     // draw
@@ -76,7 +103,7 @@ void update(void)
 
     BeginDrawing();
 
-        DrawPoly(game.player.position, 6, 25, game.player.angle*RAD2DEG, BLUE);
+        DrawPoly(game.player.position, 6, PLAYER_RADIUS, game.player.angle*RAD2DEG, BLUE);
         DrawLineV(game.player.position, Vector2Add(game.player.position, Vector2Multiply(game.player.direction, (Vector2){30, 30})), WHITE);
 
         for (int i = 0; i < NODE_COUNT; i++)
@@ -89,14 +116,16 @@ void update(void)
                 case ALIGNMENT_EVIL: nodeColor = RED; break;
             }
             DrawCircleV(game.nodes[i].position, 5, nodeColor);
-            DrawCircleLinesV(game.nodes[i].position, 30, nodeColor);
+            DrawCircleLinesV(game.nodes[i].position, APPARENT_NODE_RADIUS, nodeColor);
 
-            game.nodes[i].position.x -= 0.5;
-            if (game.nodes[i].position.x < -35)
+            if (CheckCollisionCircles(game.nodes[i].position, NODE_RADIUS, game.player.position, PLAYER_RADIUS))
             {
-                game.nodes[i].position = (Vector2){game.playfieldSize.x + 35, GetRandomValue(0, game.playfieldSize.y)};
+                DrawLineV(game.nodes[i].position, game.player.position, nodeColor);
             }
         }
+
+        DrawText(TextFormat("HEALTH: %f\n", game.player.health), 0, 0, 20, WHITE);
+        DrawText(TextFormat("EXP: %d\n", game.player.exp), 0, 20, 20, WHITE);
 
     EndDrawing();
 }
